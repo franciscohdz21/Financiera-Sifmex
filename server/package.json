@@ -1,0 +1,16 @@
+{
+  "name": "financiera-sifmex-backend",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "build": "echo \"Se añadirá TypeScript/Babel después\""
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@prisma/client": "latest"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
