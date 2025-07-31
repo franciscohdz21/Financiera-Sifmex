@@ -5,6 +5,7 @@ import Welcome from './pages/Welcome';
 import Clients from './pages/Clients';
 import Loans from './pages/Loans';
 import Payments from './pages/Payments';
+import UiDemo from "./components/UiDemo.jsx";   // demo
 
 export default function App() {
   return (
@@ -21,4 +22,12 @@ export default function App() {
       </main>
     </div>
   );
+
+// export default function App() {
+//   return (
+//     <div className="min-h-screen bg-gray-900 text-gray-100">
+//       <UiDemo />
+//     </div>
+//   );
+
 }

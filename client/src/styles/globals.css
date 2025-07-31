@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- COMPONENTS LAYER ---------- */
+@layer components {
+
+  /* ============ Botones ============ */
+  .btn-base {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg
+           font-medium shadow-sm transition-colors duration-150 select-none;
+  }
+  .btn-success { @apply btn-base bg-brand-green  text-white hover:bg-brand-green/90; }
+  .btn-error   { @apply btn-base bg-brand-red    text-white hover:bg-brand-red/90; }
+  .btn-warning { @apply btn-base bg-brand-yellow text-white hover:bg-brand-yellow/90; }
+  .btn-generic { @apply btn-base bg-brand-gray   text-white hover:bg-brand-gray/80; }
+
+  /* ============ Inputs ============ */
+  .input-base {
+    @apply w-full px-3 py-2 rounded-md bg-gray-800 text-white placeholder-gray-400
+           border border-gray-600 focus:outline-none focus:ring-2 transition-shadow;
+  }
+  .input-filter   { @apply input-base bg-gray-900 focus:ring-brand-yellow; }
+  .input-generic  { @apply input-base bg-gray-800 focus:ring-brand-green; }
+
+  /* ============ Tabla ============ */
+  .table-base      { @apply w-full text-left text-gray-200 border-collapse; }
+  .table-base thead{ @apply bg-table-header; }
+  .table-base tbody tr:nth-child(even){ @apply bg-table-row; }
+  .table-base th, .table-base td { @apply px-4 py-2 border-b border-gray-700; }
+
+  /* ============ Dropdown ============ */
+  .dropdown-menu  { @apply mt-2 w-56 rounded-md shadow-lg bg-gray-800 ring-1 ring-black
+                    ring-opacity-5 focus:outline-none animate-fade-in; }
+  .dropdown-item  { @apply block px-4 py-2 text-sm text-white hover:bg-brand-gray cursor-pointer; }
+
+  /* ============ Toast / Popup ============ */
+  .toast         { @apply fixed top-4 right-4 z-50 px-4 py-3 rounded-md text-white
+                   shadow-lg animate-fade-in; }
+  .toast-success { @apply toast bg-brand-green;  }
+  .toast-error   { @apply toast bg-brand-red;    }
+  .toast-warning { @apply toast bg-brand-yellow; }
+
+  /* ============ Navegación lateral ============ */
+  .sidenav       { @apply fixed left-0 top-0 w-64 h-screen bg-panel-bg text-white
+                   flex flex-col gap-2 p-4 shadow-lg; }
+  .sidenav-item  { @apply flex items-center gap-2 px-3 py-2 rounded-md
+                   transition-colors duration-150 hover:bg-panel-hover cursor-pointer; }
+}
