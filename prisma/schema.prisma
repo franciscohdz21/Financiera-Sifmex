@@ -1,9 +1,31 @@
-// Placeholder inicial.
+// Financiera-Sifmex/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+enum Rol {
+  Cliente
+  Aval
+  Ninguno
+}
+
+model Contacts {
+  id             Int    @id @default(autoincrement())
+  nombre         String @db.VarChar(20)
+  apellidos      String @db.VarChar(30)
+  celular        String @db.VarChar(10)
+  curp           String @db.VarChar(25)
+  calleNumero    String @db.VarChar(20)
+  colonia        String @db.VarChar(20)
+  ciudad         String @db.VarChar(25)
+  estado         String @db.VarChar(20)
+  rol            Rol
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
