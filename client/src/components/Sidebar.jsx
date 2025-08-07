@@ -1,10 +1,11 @@
+// client/src/components/Sidebar.jsx
 import { NavLink } from 'react-router-dom';
 
 const links = [
-  { to: '/bienvenida', label: 'Panel de Bienvenida' },
-  { to: '/clientes', label: 'Clientes' },
-  { to: '/prestamos', label: 'Préstamos' },
-  { to: '/pagos', label: 'Pagos' }
+  { to: '/bienvenida', label: 'Welcome' },
+  { to: '/contactos',  label: 'Contacts' },
+  { to: '/prestamos',  label: 'Loans' },
+  { to: '/pagos',      label: 'Payments' }
 ];
 
 export default function Sidebar() {
