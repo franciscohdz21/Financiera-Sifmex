@@ -1,166 +1,144 @@
-// client/src/pages/Contacts.jsx
-import React, { useEffect, useMemo, useState } from 'react';
-import ContactModal from '../components/ContactModal';
-import { Logger } from '../utils/logger';
+// Financiera-Sifmex/client/src/pages/Contacts.jsx
+import { useEffect, useState } from 'react';
+import Notification   from '../components/Notification.jsx';
+import ContactModal   from '../components/ContactModal.jsx';
 
-/* Seed temporal — borrar cuando exista API */
-const seed = [
-  {
-    id: 1,
-    nombre: 'Juan',
-    apellidos: 'Pérez',
-    celular: '442 123 4567',
-    curp: 'PEPJ800101HQTLLR04',
-    calleNumero: 'Av. Reforma 123',
-    colonia: 'Centro',
-    ciudad: 'Querétaro',
-    estado: 'QRO',
-    rol: 'Cliente'
-  }
-];
+const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export default function Contacts() {
-  const logger = new Logger();
-  const [contacts, setContacts] = useState([]);
-  const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState(null);
-
-  /* Modal state */
+  // ────────────────  State
+  const [contacts, setContacts]   = useState([]);
+  const [filter, setFilter]       = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = nuevo
+  const [editing, setEditing]     = useState(null);
+  const [toast, setToast]         = useState(null);   // { type, message }
 
-  /* Cargar datos */
-  useEffect(() => {
-    logger.log('Contacts mounted');
-    setContacts(seed);
-  }, []);
+  /** Carga contactos.
+   *  @param {boolean} notify - si true muestra toast de éxito / error
+   */
+  const load = async (notify = true) => {
+    try {
+      const res   = await fetch(`${API}/contacts?q=${encodeURIComponent(filter)}`);
+      if (!res.ok) throw new Error('Respuesta no OK');
+      const data  = await res.json();
+      setContacts(data);
 
-  /* Filtrado */
-  const visible = useMemo(() => {
-    if (!filter.trim()) return contacts;
-    const f = filter.toLowerCase();
-    return contacts.filter(
-      (c) =>
-        c.apellidos.toLowerCase().includes(f) ||
-        c.celular.toLowerCase().includes(f) ||
-        c.curp.toLowerCase().includes(f)
-    );
-  }, [contacts, filter]);
-
-  /* ------------ Handlers ------------ */
-  const openNew   = () => { setEditing(null);      setModalOpen(true); };
-  const openEdit  = () => { setEditing(selected);  setModalOpen(true); };
-  const closeModal = () => setModalOpen(false);
-
-  const saveContact = (data) => {
-    if (editing) {
-      // Update existente
-      setContacts((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...data, id: editing.id } : c))
-      );
-      logger.log('Updated', data);
-    } else {
-      // Crear nuevo
-      const newId = Math.max(0, ...contacts.map((c) => c.id)) + 1;
-      setContacts((prev) => [...prev, { ...data, id: newId }]);
-      logger.log('Created', data);
+      if (notify) {
+        setToast({ type: 'success', message: 'Contactos cargados correctamente' });
+      }
+    } catch {
+      if (notify) {
+        setToast({ type: 'error', message: 'No se pudieron cargar los contactos' });
+      }
     }
-    setModalOpen(false);
   };
 
-  const deleteContact = () => {
-    if (!selected) return;
-    setContacts((prev) => prev.filter((c) => c.id !== selected.id));
-    setSelected(null);
-    logger.warn('Deleted', selected);
+  // ────────────────  Efecto inicial + filtro
+  useEffect(() => {
+    load(true);                    // muestra toast sólo cuando cambia filtro o se monta
+  }, [filter]);
+
+  // ────────────────  Handlers
+  const openNew  = () => { setEditing(null); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c);   setModalOpen(true); };
+  const close    = () => setModalOpen(false);
+
+  const remove = async (id) => {
+    if (!confirm('¿Eliminar contacto?')) return;
+    try {
+      const res = await fetch(`${API}/contacts/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error al eliminar');
+      setToast({ type: 'success', message: 'Contacto eliminado correctamente' });
+
+      // Recarga lista sin mostrar toast de «cargados correctamente»
+      load(false);
+    } catch {
+      setToast({ type: 'error', message: 'No se pudo eliminar el contacto' });
+    }
   };
 
-  /* ------------ UI ------------ */
+  // ────────────────  UI
   return (
-    <section className="p-4 space-y-4">
-      <h1 className="text-center text-2xl font-bold">Contacts</h1>
+    <div className="p-6 text-gray-200">
+      {/* Encabezado */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <h1 className="text-3xl font-bold">Contactos</h1>
 
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-success" onClick={openNew}>New Contact</button>
-        <button
-          className="btn-warning disabled:opacity-40"
-          onClick={openEdit}
-          disabled={!selected}
-        >
-          Edit Contact
-        </button>
-        <button
-          className="btn-error disabled:opacity-40"
-          onClick={deleteContact}
-          disabled={!selected}
-        >
-          Delete Contact
-        </button>
-
-        <input
-          className="input-filter flex-1 min-w-[240px]"
-          placeholder="Filter: last name, phone or CURP"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+        <div className="flex gap-3">
+          <input
+            placeholder="Filtro…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="px-3 py-2 bg-gray-800 border border-gray-600 rounded w-48"
+          />
+          <button
+            onClick={openNew}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded">
+            Nuevo contacto
+          </button>
+        </div>
       </div>
 
+      {/* Tabla */}
       <div className="overflow-x-auto">
-        <table className="table-base w-full">
-          <thead>
+        <table className="min-w-full border border-gray-700 text-sm">
+          <thead className="bg-gray-800 text-white">
             <tr>
-              <th>Nombre</th>
-              <th>Apellidos</th>
-              <th>Celular</th>
-              <th>CURP</th>
-              <th>Calle y Número</th>
-              <th>Colonia</th>
-              <th>Ciudad</th>
-              <th>Estado</th>
-              <th>Rol</th>
+              {[
+                '#', 'Nombre', 'Apellidos', 'Celular', 'CURP',
+                'Calle & Nº', 'Colonia', 'Ciudad', 'Estado', 'Rol', 'Acciones'
+              ].map((h) => (
+                <th key={h} className="px-2 py-1">{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {visible.length ? (
-              visible.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => setSelected(c)}
-                  className={
-                    selected?.id === c.id
-                      ? 'bg-cyan-500 text-white cursor-pointer'
-                      : 'cursor-pointer hover:bg-cyan-100'
-                  }
-                >
-                  <td>{c.nombre}</td>
-                  <td>{c.apellidos}</td>
-                  <td>{c.celular}</td>
-                  <td>{c.curp}</td>
-                  <td>{c.calleNumero}</td>
-                  <td>{c.colonia}</td>
-                  <td>{c.ciudad}</td>
-                  <td>{c.estado}</td>
-                  <td>{c.rol}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={9} className="text-center py-4">
-                  No results
+            {contacts.map((c) => (
+              <tr key={c.id} className="odd:bg-gray-900 even:bg-gray-800">
+                <td className="px-2 py-1 text-center">{c.id}</td>
+                <td className="px-2 py-1">{c.nombre}</td>
+                <td className="px-2 py-1">{c.apellidos}</td>
+                <td className="px-2 py-1">{c.celular}</td>
+                <td className="px-2 py-1">{c.curp}</td>
+                <td className="px-2 py-1">{c.calleNumero}</td>
+                <td className="px-2 py-1">{c.colonia}</td>
+                <td className="px-2 py-1">{c.ciudad}</td>
+                <td className="px-2 py-1">{c.estado}</td>
+                <td className="px-2 py-1">{c.rol}</td>
+                <td className="px-2 py-1 flex gap-2">
+                  <button
+                    className="px-2 py-1 rounded bg-yellow-600 hover:bg-yellow-500"
+                    onClick={() => openEdit(c)}>
+                    Editar
+                  </button>
+                  <button
+                    className="px-2 py-1 rounded bg-red-600 hover:bg-red-500"
+                    onClick={() => remove(c.id)}>
+                    Eliminar
+                  </button>
                 </td>
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Modal para crear / editar */}
       <ContactModal
         open={modalOpen}
+        onClose={close}
         initialData={editing}
-        onSave={saveContact}
-        onClose={closeModal}
+        onSaved={() => load(false)}   // recarga sin toast extra
       />
-    </section>
+
+      {/* Toast de notificación */}
+      {toast && (
+        <Notification
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
   );
 }
