@@ -1,46 +1,90 @@
 // Financiera-Sifmex/client/src/components/ContactModal.jsx
 import { useEffect, useState } from 'react';
 
-export default function ContactModal({ open, onClose, initialData, onSaved }) {
+const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+/**
+ * Props:
+ *  - open        : boolean
+ *  - onClose     : () => void
+ *  - initialData : contacto | null  (si existe → editar, si no → nuevo)
+ *  - onSaved     : () => void       (para refrescar lista)
+ *  - onToast     : ({type, message}) => void
+ */
+export default function ContactModal({ open, onClose, initialData, onSaved, onToast }) {
   if (!open) return null;
 
   const blank = {
-    nombre: '',
-    apellidos: '',
-    celular: '',
-    curp: '',
-    calleNumero: '',
-    colonia: '',
-    ciudad: '',
-    estado: '',
-    rol: 'Ninguno'
+    nombre: '', apellidos: '', celular: '', curp: '',
+    calleNumero: '', colonia: '', ciudad: '', estado: '', rol: 'Ninguno'
   };
 
   const [form, setForm] = useState(blank);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Cargar datos al editar
-  useEffect(() => {
-    setForm(initialData ?? blank);
-  }, [initialData]);
+  // Cargar datos al abrir / editar
+  useEffect(() => { setForm(initialData ?? blank); }, [initialData]);
 
-  // Validación mínima
-  const requiredMissing = !form.celular || !form.curp;
+  const requiredMissing = !form.celular?.trim() || !form.curp?.trim();
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async () => {
-    const url  = initialData ? `/api/contacts/${initialData.id}` : '/api/contacts';
+    if (requiredMissing || submitting) return;
+    setSubmitting(true);
+
+    // Prepara payload con trims y límites defensivos
+    const payload = {
+      nombre:       (form.nombre || '').slice(0, 20).trim(),
+      apellidos:    (form.apellidos || '').slice(0, 30).trim(),
+      celular:      (form.celular || '').slice(0, 10).trim(),
+      curp:         (form.curp || '').slice(0, 25).trim(),
+      calleNumero:  (form.calleNumero || '').slice(0, 20).trim(),
+      colonia:      (form.colonia || '').slice(0, 20).trim(),
+      ciudad:       (form.ciudad || '').slice(0, 25).trim(),
+      estado:       (form.estado || '').slice(0, 20).trim(),
+      rol:          form.rol || 'Ninguno'
+    };
+
+    const url  = initialData ? `${API}/contacts/${initialData.id}` : `${API}/contacts`;
     const verb = initialData ? 'PUT' : 'POST';
 
-    await fetch(import.meta.env.VITE_API_URL + url, {
-      method: verb,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    });
+    try {
+      const res = await fetch(url, {
+        method: verb,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    onSaved();      // refresca lista en padre
-    onClose();      // cierra modal
+      if (!res.ok) {
+        // intenta leer un mensaje de error JSON del backend
+        let msg = 'Operación fallida';
+        try {
+          const data = await res.json();
+          if (data?.error) msg = data.error;
+        } catch {
+          msg = `${res.status} ${res.statusText}`;
+        }
+        throw new Error(msg);
+      }
+
+      // Éxito
+      onToast?.({
+        type: 'success',
+        message: initialData ? 'Contacto actualizado correctamente' : 'Contacto creado correctamente'
+      });
+      onSaved?.();   // refresca lista
+      onClose?.();   // cierra modal
+    } catch (e) {
+      onToast?.({
+        type: 'error',
+        message: initialData
+          ? `No se pudo actualizar el contacto: ${e.message}`
+          : `No se pudo crear el contacto: ${e.message}`
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -59,14 +103,14 @@ export default function ContactModal({ open, onClose, initialData, onSaved }) {
             ['calleNumero', 'Calle y Nº', 20],
             ['colonia', 'Colonia', 20],
             ['ciudad', 'Ciudad', 25],
-            ['estado', 'Estado', 20]
+            ['estado', 'Estado', 20],
           ].map(([name, label, max]) => (
             <label key={name} className="flex flex-col text-sm">
               {label}
               <input
                 type="text"
                 name={name}
-                value={form[name]}
+                value={form[name] ?? ''}
                 maxLength={max}
                 onChange={handleChange}
                 className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded"
@@ -79,7 +123,7 @@ export default function ContactModal({ open, onClose, initialData, onSaved }) {
             Rol
             <select
               name="rol"
-              value={form.rol}
+              value={form.rol ?? 'Ninguno'}
               onChange={handleChange}
               className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded">
               <option>Cliente</option>
@@ -93,18 +137,21 @@ export default function ContactModal({ open, onClose, initialData, onSaved }) {
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500">
+            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500"
+            disabled={submitting}
+          >
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
-            disabled={requiredMissing}
+            disabled={requiredMissing || submitting}
             className={`px-4 py-2 rounded ${
-              requiredMissing
+              requiredMissing || submitting
                 ? 'bg-green-900 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-500'
-            }`}>
-            Aceptar
+            }`}
+          >
+            {initialData ? 'Guardar' : 'Crear'}
           </button>
         </div>
       </div>
