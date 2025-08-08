@@ -6,39 +6,29 @@ import ContactModal   from '../components/ContactModal.jsx';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export default function Contacts() {
-  // ────────────────  State
   const [contacts, setContacts]   = useState([]);
   const [filter, setFilter]       = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing]     = useState(null);
   const [toast, setToast]         = useState(null);   // { type, message }
 
-  /** Carga contactos.
-   *  @param {boolean} notify - si true muestra toast de éxito / error
+  /** Carga lista.
+   *  @param {boolean} notify - si true muestra toast de carga
    */
   const load = async (notify = true) => {
     try {
-      const res   = await fetch(`${API}/contacts?q=${encodeURIComponent(filter)}`);
+      const res = await fetch(`${API}/contacts?q=${encodeURIComponent(filter)}`);
       if (!res.ok) throw new Error('Respuesta no OK');
-      const data  = await res.json();
+      const data = await res.json();
       setContacts(data);
-
-      if (notify) {
-        setToast({ type: 'success', message: 'Contactos cargados correctamente' });
-      }
-    } catch {
-      if (notify) {
-        setToast({ type: 'error', message: 'No se pudieron cargar los contactos' });
-      }
+      if (notify) setToast({ type: 'success', message: 'Contactos cargados correctamente' });
+    } catch (e) {
+      if (notify) setToast({ type: 'error', message: `No se pudieron cargar los contactos: ${e.message}` });
     }
   };
 
-  // ────────────────  Efecto inicial + filtro
-  useEffect(() => {
-    load(true);                    // muestra toast sólo cuando cambia filtro o se monta
-  }, [filter]);
+  useEffect(() => { load(true); }, [filter]);
 
-  // ────────────────  Handlers
   const openNew  = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (c) => { setEditing(c);   setModalOpen(true); };
   const close    = () => setModalOpen(false);
@@ -49,15 +39,12 @@ export default function Contacts() {
       const res = await fetch(`${API}/contacts/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Error al eliminar');
       setToast({ type: 'success', message: 'Contacto eliminado correctamente' });
-
-      // Recarga lista sin mostrar toast de «cargados correctamente»
-      load(false);
-    } catch {
-      setToast({ type: 'error', message: 'No se pudo eliminar el contacto' });
+      load(false); // recarga silenciosa
+    } catch (e) {
+      setToast({ type: 'error', message: `No se pudo eliminar el contacto: ${e.message}` });
     }
   };
 
-  // ────────────────  UI
   return (
     <div className="p-6 text-gray-200">
       {/* Encabezado */}
@@ -123,15 +110,16 @@ export default function Contacts() {
         </table>
       </div>
 
-      {/* Modal para crear / editar */}
+      {/* Modal crear/editar */}
       <ContactModal
         open={modalOpen}
         onClose={close}
         initialData={editing}
-        onSaved={() => load(false)}   // recarga sin toast extra
+        onSaved={() => load(false)}          // refresca sin toast extra
+        onToast={(t) => setToast(t)}         // muestra toasts de crear/editar
       />
 
-      {/* Toast de notificación */}
+      {/* Toast global */}
       {toast && (
         <Notification
           type={toast.type}
