@@ -1,18 +1,10 @@
-// client/src/components/ContactModal.jsx
-import React, { useEffect, useState } from 'react';
+// Financiera-Sifmex/client/src/components/ContactModal.jsx
+import { useEffect, useState } from 'react';
 
-/**
- * Modal reutilizable para crear / editar un Contacto.
- *
- * Props:
- *   open        : boolean               →  ¿Mostrar modal?
- *   initialData : objeto Contacto | null →  Datos existentes (edición) o null (nuevo)
- *   onSave      : (contacto) => void     →  Devuelve datos al guardar
- *   onClose     : () => void             →  Cerrar sin guardar
- */
-export default function ContactModal({ open, initialData, onSave, onClose }) {
-  /* ---------- Estado local de formulario ---------- */
-  const [form, setForm] = useState({
+export default function ContactModal({ open, onClose, initialData, onSaved }) {
+  if (!open) return null;
+
+  const blank = {
     nombre: '',
     apellidos: '',
     celular: '',
@@ -21,109 +13,98 @@ export default function ContactModal({ open, initialData, onSave, onClose }) {
     colonia: '',
     ciudad: '',
     estado: '',
-    rol: 'Cliente'
-  });
-
-  /* Sincronizar cuando cambie initialData */
-  useEffect(() => {
-    if (initialData) setForm(initialData);
-  }, [initialData]);
-
-  /* ---------- Helpers ---------- */
-  const requiredMissing = !form.celular.trim() || !form.curp.trim();
-
-  const handleChange = (field) => (e) =>
-    setForm({ ...form, [field]: e.target.value });
-
-  const handleSave = () => {
-    if (requiredMissing) return; // seguridad extra
-    onSave(form);
+    rol: 'Ninguno'
   };
 
-  if (!open) return null; // no se muestra
+  const [form, setForm] = useState(blank);
 
-  /* ---------- UI ---------- */
+  // Cargar datos al editar
+  useEffect(() => {
+    setForm(initialData ?? blank);
+  }, [initialData]);
+
+  // Validación mínima
+  const requiredMissing = !form.celular || !form.curp;
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async () => {
+    const url  = initialData ? `/api/contacts/${initialData.id}` : '/api/contacts';
+    const verb = initialData ? 'PUT' : 'POST';
+
+    await fetch(import.meta.env.VITE_API_URL + url, {
+      method: verb,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    });
+
+    onSaved();      // refresca lista en padre
+    onClose();      // cierra modal
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white w-full max-w-lg rounded-lg shadow-lg p-6 space-y-4">
-        <h2 className="text-xl font-semibold">
-          {initialData ? 'Edit Contact' : 'New Contact'}
+    <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+      <div className="bg-gray-900 border border-gray-700 p-6 w-full max-w-2xl rounded-xl">
+        <h2 className="text-xl font-semibold mb-4">
+          {initialData ? 'Editar contacto' : 'Nuevo contacto'}
         </h2>
 
-        {/* Formulario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            className="input-generic"
-            placeholder="Nombre"
-            value={form.nombre}
-            onChange={handleChange('nombre')}
-          />
-          <input
-            className="input-generic"
-            placeholder="Apellidos"
-            value={form.apellidos}
-            onChange={handleChange('apellidos')}
-          />
-          <input
-            className="input-generic"
-            placeholder="Celular*"
-            value={form.celular}
-            onChange={handleChange('celular')}
-          />
-          <input
-            className="input-generic"
-            placeholder="CURP*"
-            value={form.curp}
-            onChange={handleChange('curp')}
-          />
-          <input
-            className="input-generic col-span-full"
-            placeholder="Calle y Número"
-            value={form.calleNumero}
-            onChange={handleChange('calleNumero')}
-          />
-          <input
-            className="input-generic"
-            placeholder="Colonia"
-            value={form.colonia}
-            onChange={handleChange('colonia')}
-          />
-          <input
-            className="input-generic"
-            placeholder="Ciudad"
-            value={form.ciudad}
-            onChange={handleChange('ciudad')}
-          />
-          <input
-            className="input-generic"
-            placeholder="Estado"
-            value={form.estado}
-            onChange={handleChange('estado')}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            ['nombre', 'Nombre', 20],
+            ['apellidos', 'Apellidos', 30],
+            ['celular', 'Celular', 10],
+            ['curp', 'CURP', 25],
+            ['calleNumero', 'Calle y Nº', 20],
+            ['colonia', 'Colonia', 20],
+            ['ciudad', 'Ciudad', 25],
+            ['estado', 'Estado', 20]
+          ].map(([name, label, max]) => (
+            <label key={name} className="flex flex-col text-sm">
+              {label}
+              <input
+                type="text"
+                name={name}
+                value={form[name]}
+                maxLength={max}
+                onChange={handleChange}
+                className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded"
+              />
+            </label>
+          ))}
 
-          {/* Dropdown Rol */}
-          <select
-            className="input-generic"
-            value={form.rol}
-            onChange={handleChange('rol')}
-          >
-            <option value="Cliente">Cliente</option>
-            <option value="Aval">Aval</option>
-            <option value="Inactivo">Ninguno</option>
-          </select>
+          {/* Rol dropdown ocupa ambas columnas */}
+          <label className="flex flex-col text-sm col-span-2">
+            Rol
+            <select
+              name="rol"
+              value={form.rol}
+              onChange={handleChange}
+              className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded">
+              <option>Cliente</option>
+              <option>Aval</option>
+              <option>Ninguno</option>
+            </select>
+          </label>
         </div>
 
         {/* Botones */}
-        <div className="flex justify-end gap-3 pt-2">
-          <button className="btn-secondary" onClick={onClose}>
-            Cancel
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded bg-gray-600 hover:bg-gray-500">
+            Cancelar
           </button>
           <button
-            className="btn-primary disabled:opacity-40"
+            onClick={handleSubmit}
             disabled={requiredMissing}
-            onClick={handleSave}
-          >
-            Accept
+            className={`px-4 py-2 rounded ${
+              requiredMissing
+                ? 'bg-green-900 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-500'
+            }`}>
+            Aceptar
           </button>
         </div>
       </div>
