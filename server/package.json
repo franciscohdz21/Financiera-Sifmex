@@ -1,21 +1,38 @@
 {
-  "name": "financiera-sifmex-server",
-  "version": "1.0.0",
+  "name": "financiera-sifmex-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Backend Fastify + Prisma + PostgreSQL para Financiera-Sifmex",
+  "author": "Francisco Hernandez",
+  "license": "MIT",
   "type": "module",
-  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18.18.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
-    "build": "echo \"Se añadirá TypeScript/Babel después\"",
-    "dev": "node --watch index.js",
-    "start": "node index.js"
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio",
+    "seed:users": "node prisma/seedUsers.mjs",
+    "seed:contacts": "node prisma/seedContacts.mjs",
+    "clean": "rimraf node_modules"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "@fastify/cors": "^8.4.0",
-    "fastify": "^4.27.2",
-    "@prisma/client": "^6.13.0"
+    "@fastify/cookie": "^8.5.0",
+    "@fastify/cors": "^8.5.0",
+    "@fastify/jwt": "^8.0.1",
+    "@prisma/client": "^5.19.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.29.1",
+    "fastify-plugin": "^4.5.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3",
-    "prisma": "^6.13.0"
+    "prisma": "^5.19.1",
+    "rimraf": "^6.0.1"
   }
 }

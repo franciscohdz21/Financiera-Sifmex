@@ -1,25 +1,26 @@
 {
   "name": "financiera-sifmex-monorepo",
   "private": true,
-  "workspaces": [
-    "server",
-    "client"
-  ],
+  "description": "Financiera-Sifmex - Monorepo (client: React+Vite, server: Fastify, DB: PostgreSQL+Prisma)",
+  "author": "Francisco Hernandez",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
-    "dev": "echo \"Ejecuta scripts propios en /server y /client\"",
-    "db:generate": "pnpm exec prisma generate --schema=prisma/schema.prisma",
-    "db:migrate":  "pnpm exec prisma migrate dev --schema=prisma/schema.prisma",
-    "db:seed":     "pnpm exec node prisma/seedContacts.mjs"
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "start": "pnpm --filter financiera-sifmex-backend start",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "clean": "pnpm -r run clean",
+    "dev:frontend": "pnpm --filter financiera-sifmex-frontend dev",
+    "dev:backend": "pnpm --filter financiera-sifmex-backend dev",
+    "migrate": "pnpm --filter financiera-sifmex-backend db:migrate",
+    "prisma:generate": "pnpm --filter financiera-sifmex-backend db:generate",
+    "seed:users": "pnpm --filter financiera-sifmex-backend seed:users",
+    "seed:contacts": "pnpm --filter financiera-sifmex-backend seed:contacts"
   },
-  "prisma": {
-    "schema": "prisma/schema.prisma"
-  },
-  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad",
-  "devDependencies": {
-    "prisma": "^6.13.0"
-  },
-  "dependencies": {
-    "@faker-js/faker": "^9.9.0",
-    "@prisma/client": "6.13.0"
-  }
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad"
 }
