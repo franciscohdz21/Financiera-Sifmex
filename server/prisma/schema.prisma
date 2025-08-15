@@ -1,0 +1,57 @@
+// server/prisma/schema.prisma
+
+// ---------- Generators ----------
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- Datasource ----------
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Rol {
+  CLIENTE
+  AVAL
+  NINGUNO
+}
+
+enum Role {
+  ROOT
+  ADMIN
+  VIEWER
+}
+
+// ---------- Models ----------
+model Contacts {
+  id           Int      @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  cellphone    String
+  curp         String
+  streetNumber String?
+  colony       String?
+  city         String?
+  state        String?
+  role         Rol      @default(NINGUNO)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([lastName])
+  @@index([curp])
+  @@index([cellphone])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  password  String   // hash bcrypt
+  role      Role     @default(VIEWER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
