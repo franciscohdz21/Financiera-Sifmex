@@ -22,14 +22,14 @@
     "clean": "rimraf node_modules"
   },
   "dependencies": {
-    "@fastify/cookie": "^8.5.0",
-    "@fastify/cors": "^8.5.0",
-    "@fastify/jwt": "^8.0.1",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^10.1.0",
+    "@fastify/jwt": "^9.1.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
-    "fastify": "^4.29.1",
-    "fastify-plugin": "^4.5.1"
+    "fastify": "^5.5.0",
+    "fastify-plugin": "^5.0.1"
   },
   "devDependencies": {
     "prisma": "^5.19.1",

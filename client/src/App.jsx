@@ -1,24 +1,35 @@
-// client/src/App.jsx
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar   from './components/Sidebar';
-import Welcome   from './pages/Welcome';
-import Contacts  from './pages/Contacts';
-import Loans     from './pages/Loans';
-import Payments  from './pages/Payments';
+import { Routes, Route, Outlet } from 'react-router-dom'
+import ProtectedRoute from './components/ProtectedRoute'
+import Header from './components/Header'
+
+import Dashboard from './pages/Dashboard'
+import Contacts from './pages/Contacts'
+import Login from './pages/Login'
+
+function AppLayout() {
+  return (
+    <div className="min-h-screen bg-slate-950">
+      <Header />
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
 
 export default function App() {
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 p-4 overflow-auto">
-        <Routes>
-          <Route path="/"            element={<Navigate to="/bienvenida" replace />} />
-          <Route path="/bienvenida"  element={<Welcome />} />
-          <Route path="/contactos"   element={<Contacts />} />
-          <Route path="/prestamos"   element={<Loans />} />
-          <Route path="/pagos"       element={<Payments />} />
-        </Routes>
-      </main>
-    </div>
-  );
+    <Routes>
+      {/* Pública */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Requiere estar logueado (cualquier rol) */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/contacts" element={<Contacts />} />
+        </Route>
+      </Route>
+    </Routes>
+  )
 }

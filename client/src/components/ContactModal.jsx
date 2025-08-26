@@ -1,7 +1,6 @@
 // Financiera-Sifmex/client/src/components/ContactModal.jsx
 import { useEffect, useState } from 'react';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { apiFetch } from '../utils/api';
 
 /**
  * Props:
@@ -11,23 +10,84 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
  *  - onSaved     : () => void       (para refrescar lista)
  *  - onToast     : ({type, message}) => void
  */
+
+// --- Helpers de compatibilidad y normalización ---
+const BLANK = {
+  firstName: '',
+  lastName: '',
+  cellphone: '',
+  curp: '',
+  streetNumber: '',
+  colony: '',
+  city: '',
+  state: '',
+  role: 'NINGUNO', // enum backend
+};
+
+function toEnumRole(val) {
+  const v = String(val ?? '').trim().toUpperCase();
+  if (v.startsWith('CLI')) return 'CLIENTE';
+  if (v.startsWith('AVA')) return 'AVAL';
+  if (v === 'CLIENTE' || v === 'AVAL' || v === 'NINGUNO') return v;
+  return 'NINGUNO';
+}
+
+// Acepta objetos con claves en español (legacy) o en inglés (backend) y devuelve forma backend
+function normalizeInitial(data) {
+  if (!data) return { ...BLANK };
+  if ('firstName' in data) {
+    // Ya viene con claves backend
+    return {
+      firstName: data.firstName ?? '',
+      lastName: data.lastName ?? '',
+      cellphone: data.cellphone ?? '',
+      curp: data.curp ?? '',
+      streetNumber: data.streetNumber ?? '',
+      colony: data.colony ?? '',
+      city: data.city ?? '',
+      state: data.state ?? '',
+      role: toEnumRole(data.role),
+      id: data.id, // por si edita
+    };
+  }
+  // Legacy en español
+  return {
+    firstName: data.nombre ?? '',
+    lastName: data.apellidos ?? '',
+    cellphone: data.celular ?? '',
+    curp: data.curp ?? '',
+    streetNumber: data.calleNumero ?? '',
+    colony: data.colonia ?? '',
+    city: data.ciudad ?? '',
+    state: data.estado ?? '',
+    role: toEnumRole(data.rol),
+    id: data.id,
+  };
+}
+
 export default function ContactModal({ open, onClose, initialData, onSaved, onToast }) {
   if (!open) return null;
 
-  const blank = {
-    nombre: '', apellidos: '', celular: '', curp: '',
-    calleNumero: '', colonia: '', ciudad: '', estado: '', rol: 'Ninguno'
-  };
-
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState(BLANK);
   const [submitting, setSubmitting] = useState(false);
 
-  // Cargar datos al abrir / editar
-  useEffect(() => { setForm(initialData ?? blank); }, [initialData]);
+  // Cargar datos al abrir / editar (con compatibilidad)
+  useEffect(() => {
+    setForm(normalizeInitial(initialData));
+  }, [initialData]);
 
-  const requiredMissing = !form.celular?.trim() || !form.curp?.trim();
+  const requiredMissing =
+    !form.cellphone?.toString().trim() || !form.curp?.toString().trim();
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    // Rol siempre como enum backend
+    if (name === 'role') {
+      setForm((f) => ({ ...f, role: toEnumRole(value) }));
+    } else {
+      setForm((f) => ({ ...f, [name]: value }));
+    }
+  };
 
   const handleSubmit = async () => {
     if (requiredMissing || submitting) return;
@@ -35,52 +95,40 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
 
     // Prepara payload con trims y límites defensivos
     const payload = {
-      nombre:       (form.nombre || '').slice(0, 20).trim(),
-      apellidos:    (form.apellidos || '').slice(0, 30).trim(),
-      celular:      (form.celular || '').slice(0, 10).trim(),
-      curp:         (form.curp || '').slice(0, 25).trim(),
-      calleNumero:  (form.calleNumero || '').slice(0, 20).trim(),
-      colonia:      (form.colonia || '').slice(0, 20).trim(),
-      ciudad:       (form.ciudad || '').slice(0, 25).trim(),
-      estado:       (form.estado || '').slice(0, 20).trim(),
-      rol:          form.rol || 'Ninguno'
+      firstName: (form.firstName || '').slice(0, 50).trim(),
+      lastName: (form.lastName || '').slice(0, 80).trim(),
+      cellphone: (form.cellphone || '').slice(0, 20).trim(),
+      curp: (form.curp || '').slice(0, 25).trim(),
+      streetNumber: (form.streetNumber || '').slice(0, 50).trim(),
+      colony: (form.colony || '').slice(0, 60).trim(),
+      city: (form.city || '').slice(0, 60).trim(),
+      state: (form.state || '').slice(0, 40).trim(),
+      role: toEnumRole(form.role),
     };
 
-    const url  = initialData ? `${API}/contacts/${initialData.id}` : `${API}/contacts`;
-    const verb = initialData ? 'PUT' : 'POST';
+    const isEdit = Boolean(form.id || initialData?.id);
+    const id = form.id || initialData?.id;
+    const path = isEdit ? `/api/contacts/${id}` : `/api/contacts`;
+    const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
-        method: verb,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      await apiFetch(path, {
+        method,
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        // intenta leer un mensaje de error JSON del backend
-        let msg = 'Operación fallida';
-        try {
-          const data = await res.json();
-          if (data?.error) msg = data.error;
-        } catch {
-          msg = `${res.status} ${res.statusText}`;
-        }
-        throw new Error(msg);
-      }
-
-      // Éxito
       onToast?.({
         type: 'success',
-        message: initialData ? 'Contacto actualizado correctamente' : 'Contacto creado correctamente'
+        message: isEdit ? 'Contacto actualizado correctamente' : 'Contacto creado correctamente',
       });
-      onSaved?.();   // refresca lista
-      onClose?.();   // cierra modal
+      onSaved?.(); // refresca lista
+      onClose?.(); // cierra modal
     } catch (e) {
       onToast?.({
         type: 'error',
-        message: initialData
+        message: isEdit
           ? `No se pudo actualizar el contacto: ${e.message}`
-          : `No se pudo crear el contacto: ${e.message}`
+          : `No se pudo crear el contacto: ${e.message}`,
       });
     } finally {
       setSubmitting(false);
@@ -91,19 +139,19 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
     <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
       <div className="bg-gray-900 border border-gray-700 p-6 w-full max-w-2xl rounded-xl">
         <h2 className="text-xl font-semibold mb-4">
-          {initialData ? 'Editar contacto' : 'Nuevo contacto'}
+          {form.id ? 'Editar contacto' : 'Nuevo contacto'}
         </h2>
 
         <div className="grid grid-cols-2 gap-3">
           {[
-            ['nombre', 'Nombre', 20],
-            ['apellidos', 'Apellidos', 30],
-            ['celular', 'Celular', 10],
+            ['firstName', 'Nombre', 50],
+            ['lastName', 'Apellidos', 80],
+            ['cellphone', 'Celular', 20],
             ['curp', 'CURP', 25],
-            ['calleNumero', 'Calle y Nº', 20],
-            ['colonia', 'Colonia', 20],
-            ['ciudad', 'Ciudad', 25],
-            ['estado', 'Estado', 20],
+            ['streetNumber', 'Calle y Nº', 50],
+            ['colony', 'Colonia', 60],
+            ['city', 'Ciudad', 60],
+            ['state', 'Estado', 40],
           ].map(([name, label, max]) => (
             <label key={name} className="flex flex-col text-sm">
               {label}
@@ -113,7 +161,7 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
                 value={form[name] ?? ''}
                 maxLength={max}
                 onChange={handleChange}
-                className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded"
+                className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded outline-none focus:ring-2 focus:ring-blue-500"
               />
             </label>
           ))}
@@ -122,13 +170,14 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
           <label className="flex flex-col text-sm col-span-2">
             Rol
             <select
-              name="rol"
-              value={form.rol ?? 'Ninguno'}
+              name="role"
+              value={form.role ?? 'NINGUNO'}
               onChange={handleChange}
-              className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded">
-              <option>Cliente</option>
-              <option>Aval</option>
-              <option>Ninguno</option>
+              className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="CLIENTE">Cliente</option>
+              <option value="AVAL">Aval</option>
+              <option value="NINGUNO">Ninguno</option>
             </select>
           </label>
         </div>
@@ -151,7 +200,7 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
                 : 'bg-green-600 hover:bg-green-500'
             }`}
           >
-            {initialData ? 'Guardar' : 'Crear'}
+            {form.id ? 'Guardar' : 'Crear'}
           </button>
         </div>
       </div>
