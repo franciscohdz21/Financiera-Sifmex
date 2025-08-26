@@ -31,14 +31,29 @@ export default async function authRoutes(fastify) {
       .send({ ok: true });
   });
 
-  // GET /api/auth/me
-  fastify.get('/api/auth/me', { preHandler: fastify.auth.verify }, async (req) => {
-    const { id, email, role } = req.user;
-    return { id, email, role };
+  // GET /api/auth/me — robusto (401 cuando no hay token), sin preHandler
+  fastify.get('/api/auth/me', async (req, reply) => {
+    try {
+      const token = req.cookies?.sifmex_token;
+      if (!token) return reply.code(401).send({ error: 'Unauthorized' });
+
+      const payload = await fastify.jwt.verify(token);
+      const { id, email, role } = payload || {};
+      if (!id || !email || !role) return reply.code(401).send({ error: 'Unauthorized' });
+
+      return { id, email, role };
+    } catch {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
   });
 
   // POST /api/auth/logout
   fastify.post('/api/auth/logout', async (_req, reply) => {
+    reply.clearCookie('sifmex_token', { path: '/' }).send({ ok: true });
+  });
+
+  // (Opcional) GET /api/auth/logout — por si llamas con GET en vez de POST
+  fastify.get('/api/auth/logout', async (_req, reply) => {
     reply.clearCookie('sifmex_token', { path: '/' }).send({ ok: true });
   });
 }

@@ -3,50 +3,97 @@ export default async function contactsRoutes(fastify, opts = {}) {
   const G = opts.guards || {};
   const guard = (arr) => (arr && arr.length ? { preHandler: arr } : {});
 
-  // GET /api/contacts
-  // Query params:
-  //  - lastName: buscar por apellidos (contiene, case-insensitive)
-  //  - curp: buscar por curp (contiene, case-insensitive)
-  //  - cellphone: buscar por celular (contiene, case-insensitive)
-  //  - limit, offset: paginación opcional
+  const digitsOnly = (s) => String(s ?? '').replace(/\D+/g, '');
+  const up = (s) => String(s ?? '').toUpperCase().trim();
+
+  // --------------------------
+  // GET /api/contacts  (listar)
+  // --------------------------
+  // Acepta:
+  //  - q  : buscador general (OR en lastName, curp, cellphone)
+  //  - lastName | apellidos
+  //  - curp
+  //  - cellphone | phone | cel | celular
+  //  - limit, offset
   fastify.get('/api/contacts', async (req, reply) => {
-    const {
-      lastName = '',
-      curp = '',
-      cellphone = '',
-      limit = '50',
-      offset = '0',
-    } = req.query || {};
+    try {
+      const {
+        q,
+        lastName,
+        apellidos,
+        curp,
+        cellphone,
+        phone,
+        cel,
+        celular,
+        limit = '50',
+        offset = '0',
+      } = req.query || {};
 
-    const take = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
-    const skip = Math.max(parseInt(offset, 10) || 0, 0);
+      const take = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+      const skip = Math.max(parseInt(offset, 10) || 0, 0);
 
-    const where = {
-      AND: [
-        lastName
-          ? { lastName: { contains: String(lastName), mode: 'insensitive' } }
-          : {},
-        curp ? { curp: { contains: String(curp), mode: 'insensitive' } } : {},
-        cellphone
-          ? { cellphone: { contains: String(cellphone), mode: 'insensitive' } }
-          : {},
-      ],
-    };
+      const filtersAND = [];
 
-    const [items, total] = await Promise.all([
-      fastify.prisma.contacts.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take,
-      }),
-      fastify.prisma.contacts.count({ where }),
-    ]);
+      // ---- Filtro general q: OR sobre los tres campos ----
+      const qStr = (q ?? '').toString().trim();
+      if (qStr) {
+        const qDigits = digitsOnly(qStr);
+        const orQ = [
+          { lastName: { contains: qStr, mode: 'insensitive' } },
+          { curp: { contains: up(qStr), mode: 'insensitive' } },
+        ];
+        if (qDigits) {
+          orQ.push({ cellphone: { contains: qDigits } });
+        }
+        filtersAND.push({ OR: orQ });
+      }
 
-    return { items, total, limit: take, offset: skip };
+      // ---- Filtros explícitos adicionales (AND con lo anterior) ----
+      const ln = (lastName ?? apellidos)?.toString().trim();
+      if (ln) {
+        filtersAND.push({
+          lastName: { contains: ln, mode: 'insensitive' },
+        });
+      }
+
+      const cur = (curp ?? '').toString().trim();
+      if (cur) {
+        filtersAND.push({
+          curp: { contains: up(cur), mode: 'insensitive' },
+        });
+      }
+
+      const celRaw = (cellphone ?? phone ?? cel ?? celular ?? '').toString().trim();
+      const celDigits = digitsOnly(celRaw);
+      if (celDigits) {
+        filtersAND.push({
+          cellphone: { contains: celDigits },
+        });
+      }
+
+      const where = filtersAND.length ? { AND: filtersAND } : {};
+
+      const [items, total] = await Promise.all([
+        fastify.prisma.contacts.findMany({
+          where,
+          orderBy: { id: 'desc' },
+          skip,
+          take,
+        }),
+        fastify.prisma.contacts.count({ where }),
+      ]);
+
+      return reply.send({ items, total, limit: take, offset: skip });
+    } catch (err) {
+      req.log?.error?.(err, 'Error listing contacts');
+      return reply.code(500).send({ error: 'Internal error listing contacts' });
+    }
   });
 
-  // POST /api/contacts  (crear)  — protegido por rol si se pasa en opts.guards.create
+  // --------------------------
+  // POST /api/contacts  (crear)
+  // --------------------------
   fastify.post('/api/contacts', guard(G.create), async (req, reply) => {
     const {
       firstName,
@@ -60,11 +107,9 @@ export default async function contactsRoutes(fastify, opts = {}) {
       role = 'NINGUNO',
     } = req.body || {};
 
-    // Validaciones mínimas
     if (!cellphone || !curp) {
       return reply.code(400).send({ error: 'cellphone and curp are required' });
     }
-    // Valida enum role
     const allowedRoles = ['CLIENTE', 'AVAL', 'NINGUNO'];
     if (!allowedRoles.includes(role)) {
       return reply.code(400).send({ error: 'Invalid role' });
@@ -75,8 +120,8 @@ export default async function contactsRoutes(fastify, opts = {}) {
         data: {
           firstName: firstName || '',
           lastName: lastName || '',
-          cellphone,
-          curp,
+          cellphone: digitsOnly(cellphone),
+          curp: up(curp),
           streetNumber: streetNumber || null,
           colony: colony || null,
           city: city || null,
@@ -86,12 +131,14 @@ export default async function contactsRoutes(fastify, opts = {}) {
       });
       return reply.code(201).send({ ok: true, item: created });
     } catch (e) {
-      req.log.error(e, 'Error creating contact');
+      req.log?.error?.(e, 'Error creating contact');
       return reply.code(500).send({ error: 'Failed to create contact' });
     }
   });
 
-  // PUT /api/contacts/:id  (actualizar) — protegido por rol si se pasa en opts.guards.update
+  // ----------------------------------
+  // PUT /api/contacts/:id  (actualizar)
+  // ----------------------------------
   fastify.put('/api/contacts/:id', guard(G.update), async (req, reply) => {
     const { id } = req.params || {};
     const {
@@ -106,7 +153,6 @@ export default async function contactsRoutes(fastify, opts = {}) {
       role,
     } = req.body || {};
 
-    // Validaciones básicas coherentes con POST
     if (cellphone !== undefined && !cellphone) {
       return reply.code(400).send({ error: 'cellphone cannot be empty' });
     }
@@ -126,8 +172,8 @@ export default async function contactsRoutes(fastify, opts = {}) {
         data: {
           ...(firstName !== undefined ? { firstName } : {}),
           ...(lastName !== undefined ? { lastName } : {}),
-          ...(cellphone !== undefined ? { cellphone } : {}),
-          ...(curp !== undefined ? { curp } : {}),
+          ...(cellphone !== undefined ? { cellphone: digitsOnly(cellphone) } : {}),
+          ...(curp !== undefined ? { curp: up(curp) } : {}),
           ...(streetNumber !== undefined ? { streetNumber } : {}),
           ...(colony !== undefined ? { colony } : {}),
           ...(city !== undefined ? { city } : {}),
@@ -137,7 +183,7 @@ export default async function contactsRoutes(fastify, opts = {}) {
       });
       return { ok: true, item: updated };
     } catch (e) {
-      req.log.error(e, 'Error updating contact');
+      req.log?.error?.(e, 'Error updating contact');
       if (e.code === 'P2025') {
         return reply.code(404).send({ error: 'Contact not found' });
       }
@@ -145,14 +191,16 @@ export default async function contactsRoutes(fastify, opts = {}) {
     }
   });
 
-  // DELETE /api/contacts/:id  — protegido por rol si se pasa en opts.guards.remove
+  // ------------------------------
+  // DELETE /api/contacts/:id
+  // ------------------------------
   fastify.delete('/api/contacts/:id', guard(G.remove), async (req, reply) => {
     const { id } = req.params || {};
     try {
       await fastify.prisma.contacts.delete({ where: { id: Number(id) } });
       return { ok: true };
     } catch (e) {
-      req.log.error(e, 'Error deleting contact');
+      req.log?.error?.(e, 'Error deleting contact');
       if (e.code === 'P2025') {
         return reply.code(404).send({ error: 'Contact not found' });
       }
