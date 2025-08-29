@@ -1,39 +1,37 @@
-# --- Base ---
-FROM node:20-alpine AS base
+# --- Base: Debian slim (mejor con Prisma/OpenSSL) ---
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && corepack enable
 
 # --- Deps ---
 FROM base AS deps
 WORKDIR /app
+# Copiamos solo lo necesario para instalar deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-
-# --- Prisma generate ---
-FROM deps AS prisma
-WORKDIR /app
-COPY prisma ./prisma
-RUN pnpm prisma generate
+# Instala solo dependencias de runtime (incluye @prisma/client, NO devDeps)
+RUN pnpm install --prod --no-optional
 
 # --- Runtime ---
 FROM base AS runtime
 WORKDIR /app
 
-# node_modules con Prisma Client
+# Traemos node_modules resueltos
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copiamos esquema prisma (para migrate deploy)
+# Copiamos prisma y código
 COPY prisma ./prisma
-
-# Copiamos el código fuente del server
 COPY . .
+
+# 👇 Genera Prisma Client dentro de la imagen (misma versión que @prisma/client)
+# Usa versión fija del CLI compatible con tu @prisma/client (5.22.0)
+RUN pnpm dlx prisma@5.22.0 generate
 
 ENV PORT=4000
 EXPOSE 4000
 
-# Si usas TypeScript con build, agrega aquí:
-# RUN pnpm build
-
-# Entrypoint (alineado a tu estructura real)
+# Fallback (Render puede sobreescribir con Docker Command)
 CMD ["node", "src/server.js"]

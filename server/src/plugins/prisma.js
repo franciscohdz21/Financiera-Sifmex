@@ -1,18 +1,21 @@
 // server/src/plugins/prisma.js
 import fp from 'fastify-plugin';
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client'; // CJS → usar default import
+const { PrismaClient } = pkg;
+
+// Crear una sola instancia para toda la app
+const prisma = new PrismaClient();
 
 export default fp(async function prismaPlugin(fastify) {
-  const prisma = new PrismaClient();
-
+  // Exponer prisma en fastify
   fastify.decorate('prisma', prisma);
 
-  fastify.addHook('onClose', async (instance, done) => {
+  // Cerrar conexión al apagar el servidor
+  fastify.addHook('onClose', async (instance) => {
     try {
       await instance.prisma.$disconnect();
-    } catch (e) {
-      instance.log.error(e, 'Error disconnecting Prisma');
+    } catch (err) {
+      instance.log.error({ err }, 'Error disconnecting Prisma');
     }
-    done();
   });
 });
