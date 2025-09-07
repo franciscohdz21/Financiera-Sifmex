@@ -13,5 +13,5 @@ app.use('/api/loans', loansRouter);
 app.use('/api/payments', paymentsRouter);
 
 app.listen(4000, () =>
-  console.log('API Financiera-Sifmex escuchando en http://localhost:4000')
+  console.log('API Financiera-Sifmex escuchando en PORT configurado (por defecto 4000)')
 );

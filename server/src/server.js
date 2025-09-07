@@ -60,7 +60,7 @@ const host = process.env.HOST || '0.0.0.0';
 
 try {
   await fastify.listen({ port, host });
-  fastify.log.info(`✅ Server running on http://localhost:${port}`);
+  fastify.log.info(`✅ Server running on port ${port}`);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);
