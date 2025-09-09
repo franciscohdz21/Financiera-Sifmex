@@ -20,8 +20,10 @@ enum Rol {
 
 enum Role {
   ROOT
+  GERENTE
   ADMIN
-  VIEWER
+  EJECUTIVO
+  SUPERVISOR
 }
 
 // ---------- Models ----------
@@ -50,7 +52,7 @@ model User {
   email     String   @unique
   name      String?
   password  String   // hash bcrypt
-  role      Role     @default(VIEWER)
+  role      Role     @default(SUPERVISOR)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
