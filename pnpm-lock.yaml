@@ -10,15 +10,21 @@ importers:
 
   client:
     dependencies:
+      '@vitejs/plugin-react':
+        specifier: ^5.0.1
+        version: 5.0.1(vite@5.4.19)
       react:
-        specifier: ^18.3.1
+        specifier: 18.3.1
         version: 18.3.1
       react-dom:
-        specifier: ^18.3.1
+        specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
       react-router-dom:
         specifier: ^6.30.1
         version: 6.30.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      vite:
+        specifier: ^5.4.19
+        version: 5.4.19
     devDependencies:
       '@types/react':
         specifier: ^18.2.74
@@ -26,9 +32,6 @@ importers:
       '@types/react-dom':
         specifier: ^18.2.24
         version: 18.3.7(@types/react@18.3.23)
-      '@vitejs/plugin-react':
-        specifier: ^5.0.1
-        version: 5.0.1(vite@5.4.19)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.21(postcss@8.5.6)
@@ -48,14 +51,11 @@ importers:
         specifier: ^3.3.3
         version: 3.6.2
       rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
+        specifier: 5.0.5
+        version: 5.0.5
       tailwindcss:
         specifier: ^3.4.10
         version: 3.4.17
-      vite:
-        specifier: ^5.4.19
-        version: 5.4.19
 
   server:
     dependencies:
@@ -1398,6 +1398,11 @@ packages:
 
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
+
+  rimraf@5.0.5:
+    resolution: {integrity: sha512-CqDakW+hMe/Bz202FPEymy68P+G50RfMQK+Qo5YUqc9SPipvbGjCGKd0RSKEelbsfQuw3g5NZDSrlZZAJurH1A==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   rimraf@6.0.1:
     resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
@@ -2847,6 +2852,10 @@ snapshots:
   reusify@1.1.0: {}
 
   rfdc@1.4.1: {}
+
+  rimraf@5.0.5:
+    dependencies:
+      glob: 10.4.5
 
   rimraf@6.0.1:
     dependencies:

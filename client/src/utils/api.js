@@ -1,31 +1,48 @@
 // client/src/utils/api.js
 
-// URL base de la API, configurada desde las variables de entorno de Vite
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL; // p.ej. https://financiera-sifmex-web.onrender.com
 
 export async function apiFetch(path, options = {}) {
   const hasBody = options.body !== undefined && options.body !== null;
 
-  const headers = hasBody
-    ? { 'Content-Type': 'application/json', ...(options.headers || {}) }
-    : (options.headers || {});
+  const headers = {
+    Accept: 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.headers || {}),
+  };
 
   const res = await fetch(`${API}${path}`, {
-    credentials: 'include', // si usas cookies. Si no, puedes quitarlo
+    credentials: 'include', // necesitamos la cookie del backend
     headers,
     ...options,
   });
 
-  if (!res.ok) {
-    let err = `Request failed with status ${res.status}`;
-    try {
-      const j = await res.json();
-      err = j.error || j.message || err;
-    } catch {
-      // ignorar si no se puede parsear el body
-    }
-    throw new Error(err);
+  // Leemos el body como texto una sola vez
+  let raw = '';
+  try {
+    raw = await res.text();
+  } catch {
+    raw = '';
   }
 
-  return res.status === 204 ? null : res.json();
+  // Intentamos parsear JSON si hay texto
+  let data = null;
+  if (raw && raw.trim().length > 0) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      // No es JSON válido: lo dejamos en null y seguimos
+      data = null;
+    }
+  }
+
+  if (!res.ok) {
+    const msg =
+      (data && (data.error || data.message)) ||
+      `Request failed with status ${res.status}`;
+    throw new Error(msg);
+  }
+
+  // Éxito: puede venir JSON o cuerpo vacío (p.ej. 204)
+  return data; // si no había body, será null
 }

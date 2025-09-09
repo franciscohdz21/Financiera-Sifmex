@@ -1,47 +1,41 @@
 // server/prisma/seedUsers.mjs
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import 'dotenv/config';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  const entries = [
-    {
-      email: process.env.SEED_ROOT_EMAIL || 'root@sifmex.local',
-      pass: process.env.SEED_ROOT_PASSWORD || 'root123!',
-      role: 'ROOT',
-      name: 'Root User',
-    },
-    {
-      email: process.env.SEED_ADMIN_EMAIL || 'admin@sifmex.local',
-      pass: process.env.SEED_ADMIN_PASSWORD || 'admin123!',
-      role: 'ADMIN',
-      name: 'Admin User',
-    },
-    {
-      email: process.env.SEED_VIEWER_EMAIL || 'viewer@sifmex.local',
-      pass: process.env.SEED_VIEWER_PASSWORD || 'viewer123!',
-      role: 'VIEWER',
-      name: 'Viewer User',
-    },
-  ];
+const USERS = [
+  { email: 'root@sifmex.local',       name: 'Root',       role: 'ROOT',       password: 'ROadzx01-' },
+  { email: 'gerente@sifmex.local',    name: 'Gerente',    role: 'GERENTE',    password: 'GEadzx02-' },
+  { email: 'admin@sifmex.local',      name: 'Admin',      role: 'ADMIN',      password: 'ADadzx03-' },
+  { email: 'ejecutivo@sifmex.local',  name: 'Ejecutivo',  role: 'EJECUTIVO',  password: 'EJadzx04-' },
+  { email: 'supervisor@sifmex.local', name: 'Supervisor', role: 'SUPERVISOR', password: 'SUadzx05-' }
+];
 
-  for (const u of entries) {
-    const hash = await bcrypt.hash(u.pass, 10);
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: { password: hash, role: u.role, name: u.name },
-      create: { email: u.email, password: hash, role: u.role, name: u.name },
-    });
-    console.log(`Seeded user: ${u.email} (${u.role})`);
+async function upsertUser(u) {
+  const hash = await bcrypt.hash(u.password, 10);
+
+  await prisma.user.upsert({
+    where: { email: u.email },
+    update: { name: u.name, role: u.role, password: hash },
+    create: { email: u.email, name: u.name, role: u.role, password: hash }
+  });
+
+  console.log(`✓ Usuario listo: ${u.email} (${u.role})`);
+}
+
+async function main() {
+  for (const u of USERS) {
+    await upsertUser(u);
   }
+  console.log('✅ Seed completado');
 }
 
 main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error('❌ Seed falló:', e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

@@ -17,9 +17,14 @@
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
     "seed:users": "node prisma/seedUsers.mjs",
     "seed:contacts": "node prisma/seedContacts.mjs",
     "clean": "rimraf node_modules"
+  },
+  "prisma": {
+    "seed": "node prisma/seedUsers.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
