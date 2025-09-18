@@ -22,9 +22,23 @@ function randomCurp() {
   const l = () => letters[Math.floor(Math.random() * letters.length)];
   return `${l()}${l()}${l()}${l()}${digits(6)}${l()}${l()}${digits(2)}${l()}${digits(3)}`;
 }
+function randomFallos() {
+  // Entero 0..5
+  return Math.floor(Math.random() * 6);
+}
+function randomNotas(i) {
+  // 60% de probabilidad de tener nota; máx 100 chars
+  if (Math.random() < 0.4) return null;
+  const base = `Nota de prueba #${i + 1}: seguimiento de contacto, llamada pendiente.`;
+  return base.slice(0, 100);
+}
 
 async function main() {
   const total = 30;
+
+  // (Opcional) Limpia antes de sembrar:
+  // await prisma.contacts.deleteMany();
+
   for (let i = 0; i < total; i++) {
     const firstName = rand(firstNames);
     const lastName  = rand(lastNames);
@@ -43,6 +57,10 @@ async function main() {
         city: rand(cities),
         state: rand(states),
         role: rand(roles),
+
+        // Nuevos campos:
+        fallos: randomFallos(),
+        notas: randomNotas(i),
       },
     });
   }

@@ -72,6 +72,23 @@ export default function Contacts() {
     }
   };
 
+  // Encabezados de la tabla (agregamos Fallos y Notas después de Rol)
+  const headers = [
+    '#',
+    'Nombre',
+    'Apellidos',
+    'Celular',
+    'CURP',
+    'Calle & Nº',
+    'Colonia',
+    'Ciudad',
+    'Estado',
+    'Rol',
+    'Fallos',
+    'Notas',
+    'Acciones',
+  ];
+
   return (
     <div className="p-6 text-gray-200">
       {/* Encabezado */}
@@ -106,19 +123,7 @@ export default function Contacts() {
         <table className="min-w-full border border-gray-700 text-sm">
           <thead className="bg-gray-800 text-white">
             <tr>
-              {[
-                '#',
-                'Nombre',
-                'Apellidos',
-                'Celular',
-                'CURP',
-                'Calle & Nº',
-                'Colonia',
-                'Ciudad',
-                'Estado',
-                'Rol',
-                'Acciones',
-              ].map((h) => (
+              {headers.map((h) => (
                 <th key={h} className="px-2 py-2 text-left">
                   {h}
                 </th>
@@ -138,6 +143,15 @@ export default function Contacts() {
                 <td className="px-2 py-2">{c.city}</td>
                 <td className="px-2 py-2">{c.state}</td>
                 <td className="px-2 py-2">{c.role}</td>
+                {/* Nuevos campos */}
+                <td className="px-2 py-2">{c.fallos ?? 0}</td>
+                <td className="px-2 py-2">
+                  {typeof c.notas === 'string'
+                    ? c.notas.length > 60
+                      ? `${c.notas.slice(0, 60)}…`
+                      : c.notas
+                    : ''}
+                </td>
                 <td className="px-2 py-2">
                   <div className="flex gap-2">
                     <button
@@ -167,7 +181,7 @@ export default function Contacts() {
 
             {!loading && items.length === 0 && (
               <tr>
-                <td className="px-2 py-4 text-center text-slate-400" colSpan={11}>
+                <td className="px-2 py-4 text-center text-slate-400" colSpan={headers.length}>
                   No hay contactos que coincidan con tu búsqueda.
                 </td>
               </tr>

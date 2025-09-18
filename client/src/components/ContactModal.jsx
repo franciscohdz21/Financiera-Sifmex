@@ -1,5 +1,5 @@
 // Financiera-Sifmex/client/src/components/ContactModal.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../utils/api';
 
 /**
@@ -22,6 +22,9 @@ const BLANK = {
   city: '',
   state: '',
   role: 'NINGUNO', // enum backend
+  // nuevos
+  fallos: 0,
+  notas: '',
 };
 
 function toEnumRole(val) {
@@ -47,6 +50,9 @@ function normalizeInitial(data) {
       city: data.city ?? '',
       state: data.state ?? '',
       role: toEnumRole(data.role),
+      // nuevos
+      fallos: Number.isInteger(data.fallos) ? data.fallos : 0,
+      notas: data.notas ?? '',
       id: data.id, // por si edita
     };
   }
@@ -61,6 +67,9 @@ function normalizeInitial(data) {
     city: data.ciudad ?? '',
     state: data.estado ?? '',
     role: toEnumRole(data.rol),
+    // nuevos
+    fallos: Number.isInteger(data.fallos) ? data.fallos : 0,
+    notas: data.notas ?? '',
     id: data.id,
   };
 }
@@ -79,18 +88,25 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
   const requiredMissing =
     !form.cellphone?.toString().trim() || !form.curp?.toString().trim();
 
+  const notasCount = useMemo(() => (form.notas || '').length, [form.notas]);
+  const notasInvalid = notasCount > 100;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Rol siempre como enum backend
     if (name === 'role') {
       setForm((f) => ({ ...f, role: toEnumRole(value) }));
+    } else if (name === 'fallos') {
+      const n = parseInt(value, 10);
+      setForm((f) => ({ ...f, fallos: Number.isNaN(n) ? 0 : Math.max(0, Math.min(5, n)) }));
+    } else if (name === 'notas') {
+      setForm((f) => ({ ...f, notas: value.slice(0, 100) })); // cap 100
     } else {
       setForm((f) => ({ ...f, [name]: value }));
     }
   };
 
   const handleSubmit = async () => {
-    if (requiredMissing || submitting) return;
+    if (requiredMissing || submitting || notasInvalid) return;
     setSubmitting(true);
 
     // Prepara payload con trims y límites defensivos
@@ -104,6 +120,9 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
       city: (form.city || '').slice(0, 60).trim(),
       state: (form.state || '').slice(0, 40).trim(),
       role: toEnumRole(form.role),
+      // nuevos
+      fallos: Math.max(0, Math.min(5, parseInt(form.fallos, 10) || 0)),
+      notas: (form.notas || '').trim() ? (form.notas || '').trim().slice(0, 100) : null,
     };
 
     const isEdit = Boolean(form.id || initialData?.id);
@@ -146,8 +165,8 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
           {[
             ['firstName', 'Nombre', 50],
             ['lastName', 'Apellidos', 80],
-            ['cellphone', 'Celular', 20],
-            ['curp', 'CURP', 25],
+            ['cellphone', 'Celular *', 20],
+            ['curp', 'CURP *', 25],
             ['streetNumber', 'Calle y Nº', 50],
             ['colony', 'Colonia', 60],
             ['city', 'Ciudad', 60],
@@ -180,6 +199,40 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
               <option value="NINGUNO">Ninguno</option>
             </select>
           </label>
+
+          {/* Fallos dropdown (0..5) */}
+          <label className="flex flex-col text-sm">
+            Fallos
+            <select
+              name="fallos"
+              value={form.fallos ?? 0}
+              onChange={handleChange}
+              className="mt-1 px-2 py-1 bg-gray-800 border border-gray-600 rounded outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {[0, 1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* Notas (máx 100 caracteres) */}
+          <label className="flex flex-col text-sm">
+            Notas (máx. 100)
+            <input
+              type="text"
+              name="notas"
+              value={form.notas ?? ''}
+              maxLength={100}
+              onChange={handleChange}
+              className={`mt-1 px-2 py-1 bg-gray-800 border rounded outline-none focus:ring-2 ${
+                notasInvalid ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-blue-500'
+              }`}
+              placeholder="Observaciones del contacto"
+            />
+            <span className={`mt-1 text-xs ${notasInvalid ? 'text-red-400' : 'text-slate-400'}`}>
+              {notasCount}/100
+            </span>
+          </label>
         </div>
 
         {/* Botones */}
@@ -193,9 +246,9 @@ export default function ContactModal({ open, onClose, initialData, onSaved, onTo
           </button>
           <button
             onClick={handleSubmit}
-            disabled={requiredMissing || submitting}
+            disabled={requiredMissing || submitting || notasInvalid}
             className={`px-4 py-2 rounded ${
-              requiredMissing || submitting
+              requiredMissing || submitting || notasInvalid
                 ? 'bg-green-900 cursor-not-allowed'
                 : 'bg-green-600 hover:bg-green-500'
             }`}
